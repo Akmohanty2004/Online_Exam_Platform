@@ -1,0 +1,122 @@
+/* ===== Responsive Styles ===== */
+
+/* Tablets */
+@media (max-width: 1024px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Mobile */
+@media (max-width: 768px) {
+  .stats-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+  
+  .page-content {
+    padding: 16px;
+  }
+  
+  .top-header {
+    padding: 0 16px;
+  }
+  
+  .top-header .header-left h1 {
+    font-size: 17px;
+  }
+  
+  .welcome-banner {
+    padding: 20px;
+  }
+  
+  .welcome-banner h2 {
+    font-size: 20px;
+  }
+  
+  .recent-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+  
+  .recent-item .item-status {
+    width: 100%;
+    justify-content: flex-start;
+  }
+}
+
+/* Small Mobile */
+@media (max-width: 480px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .auth-card {
+    padding: 24px 16px;
+  }
+  
+  .auth-card .logo h1 {
+    font-size: 24px;
+  }
+  
+  .role-selector {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+  }
+  
+  .role-btn {
+    padding: 10px 8px;
+    font-size: 11px;
+  }
+  
+  .role-btn svg {
+    font-size: 18px;
+  }
+  
+  .btn-primary, .btn-secondary, .btn-outline {
+    padding: 10px 20px;
+    font-size: 14px;
+  }
+  
+  .top-header .header-right .user-badge .role-text {
+    display: none;
+  }
+  
+  .card {
+    padding: 16px;
+  }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: light) {
+  /* This is handled by our dark theme by default */
+}
+
+/* Print styles */
+@media print {
+  .sidebar, .top-header, .exam-webcam {
+    display: none !important;
+  }
+  
+  .main-content {
+    margin-left: 0 !important;
+  }
+  
+  .exam-fullscreen {
+    position: relative;
+    height: auto;
+  }
+}
+
+/* Accessibility */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
