@@ -30,7 +30,14 @@ const Login = () => {
 
   const handleSubmit = async (e) => {
     e.preventDefault()
-    if (!email || !password) return
+    if (!email) {
+      toast.error('Please fill in your email address properly for better understanding.');
+      return;
+    }
+    if (!password) {
+      toast.error('Please fill in your password properly for better understanding.');
+      return;
+    }
     await dispatch(loginUser({ email, password, role: selectedRole }))
   }
 
@@ -62,7 +69,10 @@ const Login = () => {
       {/* Light overlay just to ensure text readability without obscuring the background */}
       <div style={{
         position: 'absolute',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.1)',
         zIndex: 0
       }} />
@@ -227,7 +237,7 @@ const Login = () => {
             <div style={{ position: 'relative' }}>
               <FiMail style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }} />
               <input
-                type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" required
+                type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email"
                 style={{
                   width: '100%', padding: '14px 18px 14px 48px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '16px', color: 'white', fontSize: '15px', outline: 'none', transition: 'all 0.3s ease'
@@ -244,9 +254,9 @@ const Login = () => {
             <div style={{ position: 'relative' }}>
               <FiLock style={{ position: 'absolute', left: '18px', top: '50%', transform: 'translateY(-50%)', color: '#64748b', fontSize: '18px' }} />
               <input
-                type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password" required
+                type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Enter your password"
                 style={{
-                  width: '100%', padding: '14px 18px 14px 48px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
+                  width: '100%', padding: '14px 48px', background: 'rgba(255, 255, 255, 0.05)', border: '1px solid rgba(255, 255, 255, 0.1)',
                   borderRadius: '16px', color: 'white', fontSize: '15px', outline: 'none', transition: 'all 0.3s ease'
                 }}
                 onFocus={(e) => { e.target.style.borderColor = '#38bdf8'; e.target.style.background = 'rgba(255, 255, 255, 0.1)' }}

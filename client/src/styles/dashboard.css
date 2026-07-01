@@ -265,10 +265,12 @@
 
 .recent-item {
   display: flex;
-  align-items: center;
   justify-content: space-between;
-  padding: 14px 18px;
-  background: rgba(51, 65, 85, 0.2);
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.02);
   border-radius: var(--border-radius);
   transition: var(--transition);
 }

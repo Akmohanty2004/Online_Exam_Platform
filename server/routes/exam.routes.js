@@ -449,8 +449,15 @@ router.put('/:examId/publish-results',
         return res.status(403).json({ message: 'Access denied' });
       }
       
-      // Removed completion requirement to allow publishing at any time
+      // Check if exam end time has passed
+      const now = new Date();
+      const endDateTime = new Date(exam.date);
+      const [endHours, endMinutes] = exam.endTime.split(':');
+      endDateTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
       
+      if (now < endDateTime) {
+        return res.status(400).json({ message: 'Cannot publish results before the exam has ended.' });
+      }
       exam.isResultPublished = true;
       await exam.save();
       
@@ -589,6 +596,15 @@ router.get('/:examId/student',
         return res.status(400).json({ 
           message: 'Exam time has ended.',
           endTime: endDateTime
+        });
+      }
+      
+      // Enforce late entry limit
+      const entryTimeLimit = new Date(examDateTime.getTime() + (exam.entryTime || 15) * 60000);
+      if (now > entryTimeLimit) {
+        return res.status(400).json({
+          message: `Sorry, you are late. You are only allowed to join up to ${exam.entryTime || 15} minutes after the start time.`,
+          entryTimeLimit
         });
       }
       

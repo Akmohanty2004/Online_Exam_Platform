@@ -66,9 +66,11 @@ const StudentResults = () => {
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap' }}>
                   <h4 style={{ color: 'white', fontWeight: 600 }}>{result.examId?.title || 'Unknown Exam'}</h4>
-                  <span className={`badge ${result.isPassed ? 'badge-success' : 'badge-danger'}`}>
-                    {result.isPassed ? 'Passed' : 'Failed'}
-                  </span>
+                  {result.isPublished && (
+                    <span className={`badge ${result.isPassed ? 'badge-success' : 'badge-danger'}`}>
+                      {result.isPassed ? 'Passed' : 'Failed'}
+                    </span>
+                  )}
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '6px', color: 'var(--dark-400)', fontSize: '14px' }}>
                   <span>{result.examId?.subject || 'N/A'}</span>

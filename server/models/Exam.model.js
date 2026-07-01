@@ -90,6 +90,10 @@ const examSchema = new mongoose.Schema({
     type: Number,
     default: 1
   },
+  entryTime: {
+    type: Number,
+    default: 15
+  },
   status: {
     type: String,
     enum: ['draft', 'published', 'ongoing', 'completed', 'cancelled'],

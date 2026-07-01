@@ -249,7 +249,7 @@ const StudentDashboard = () => {
         <div className="chart-container">
           <h3>Recent Exams</h3>
           <div className="recent-list">
-            {exams?.slice(0, 5).map((exam) => (
+            {[...exams || []].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 5).map((exam) => (
               <div className="recent-item" key={exam._id}>
                 <div className="item-info">
                   <span className="title">{exam.title}</span>

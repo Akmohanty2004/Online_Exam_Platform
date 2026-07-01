@@ -208,13 +208,12 @@ router.get('/exam/:examId',
         return res.status(404).json({ message: 'Exam not found' });
       }
 
-      if (exam.createdBy.toString() !== req.userId && req.user.role !== 'admin') {
+      if (exam.createdBy.toString() !== req.userId.toString() && req.user.role !== 'admin') {
         return res.status(403).json({ message: 'Access denied' });
       }
 
       const results = await Result.find({ 
-        examId: req.params.examId,
-        status: 'submitted'
+        examId: req.params.examId
       })
       .populate('studentId', 'name email profileImage department')
       .sort({ obtainedMarks: -1 });
@@ -264,8 +263,18 @@ router.put('/:examId/publish',
         return res.status(404).json({ message: 'Exam not found' });
       }
 
-      if (exam.createdBy.toString() !== req.userId) {
+      if (exam.createdBy.toString() !== req.userId.toString()) {
         return res.status(403).json({ message: 'Access denied' });
+      }
+
+      // Check if exam end time has passed
+      const now = new Date();
+      const endDateTime = new Date(exam.date);
+      const [endHours, endMinutes] = exam.endTime.split(':');
+      endDateTime.setHours(parseInt(endHours), parseInt(endMinutes), 0, 0);
+      
+      if (now < endDateTime) {
+        return res.status(400).json({ message: 'Cannot publish results before the exam has ended.' });
       }
 
       exam.isResultPublished = true;
@@ -273,8 +282,7 @@ router.put('/:examId/publish',
 
       // Notify all students who took the exam
       const results = await Result.find({ 
-        examId: exam._id,
-        status: 'submitted'
+        examId: exam._id
       });
 
       const notifications = results.map(result => ({

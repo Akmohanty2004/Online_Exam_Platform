@@ -28,7 +28,7 @@ router.post('/add',
         return res.status(404).json({ message: 'Exam not found' });
       }
 
-      if (exam.createdBy.toString() !== req.userId) {
+      if (exam.createdBy.toString() !== req.userId.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -76,7 +76,7 @@ router.post('/add-multiple',
         return res.status(404).json({ message: 'Exam not found' });
       }
 
-      if (exam.createdBy.toString() !== req.userId) {
+      if (exam.createdBy.toString() !== req.userId.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -121,7 +121,7 @@ router.get('/exam/:examId',
       }
 
       // Check permissions
-      if (req.user.role === 'teacher' && exam.createdBy.toString() !== req.userId) {
+      if (req.user.role === 'teacher' && exam.createdBy.toString() !== req.userId.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -153,7 +153,7 @@ router.put('/:questionId',
       }
 
       const exam = await Exam.findById(question.examId);
-      if (exam.createdBy.toString() !== req.userId) {
+      if (exam.createdBy.toString() !== req.userId.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
 
@@ -193,7 +193,7 @@ router.delete('/:questionId',
       }
 
       const exam = await Exam.findById(question.examId);
-      if (exam.createdBy.toString() !== req.userId) {
+      if (exam.createdBy.toString() !== req.userId.toString()) {
         return res.status(403).json({ message: 'Access denied' });
       }
 

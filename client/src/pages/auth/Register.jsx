@@ -32,6 +32,15 @@ const Register = () => {
     }
   }
 
+  const onError = (errors) => {
+    const firstError = Object.values(errors)[0];
+    if (firstError && firstError.message) {
+      toast.error(firstError.message);
+    } else {
+      toast.error("Please fill in all required fields properly for better understanding.");
+    }
+  }
+
   // Animation variants
   const containerVariants = {
     hidden: { opacity: 0, scale: 0.95, x: -50 },
@@ -70,7 +79,10 @@ const Register = () => {
       {/* Light overlay to ensure the image is clean but text on the form remains readable */}
       <div style={{
         position: 'absolute',
-        inset: 0,
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
         backgroundColor: 'rgba(0, 0, 0, 0.1)',
         zIndex: 0
       }} />
@@ -166,7 +178,7 @@ const Register = () => {
           })}
         </div>
 
-        <form onSubmit={handleSubmit(onSubmit)}>
+        <form onSubmit={handleSubmit(onSubmit, onError)}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '16px', marginBottom: '24px' }}>
             {/* Name */}
             <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>

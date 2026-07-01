@@ -29,6 +29,7 @@ const CreateExam = () => {
     endTime: '',
     entryTime: 15,
     duration: 60,
+    targetQuestions: 10,
     maxMarks: 100,
     passingMarks: 40,
     negativeMarking: false,
@@ -62,6 +63,11 @@ const CreateExam = () => {
   }
 
   const addQuestion = () => {
+    if (questions.length >= examData.targetQuestions) {
+      toast.error(`You have already reached your target of ${examData.targetQuestions} questions!`)
+      return
+    }
+
     if (!currentQuestion.question.trim()) {
       toast.error('Please enter a question')
       return
@@ -108,6 +114,7 @@ const CreateExam = () => {
 
   const removeQuestion = (id) => {
     setQuestions(questions.filter(q => q.id !== id))
+    toast.success('Question removed successfully')
   }
 
   const duplicateQuestion = (id) => {
@@ -145,6 +152,11 @@ const CreateExam = () => {
       return
     }
 
+    if (questions.length !== parseInt(examData.targetQuestions)) {
+      toast.error(`Please add exactly ${examData.targetQuestions} questions. You have added ${questions.length}.`)
+      return
+    }
+
     if (!examData.title || !examData.subject || !examData.password || 
         !examData.date || !examData.startTime || !examData.endTime) {
       toast.error('Please fill all required fields in Step 1')
@@ -166,6 +178,7 @@ const CreateExam = () => {
 
     try {
       const result = await dispatch(createExam(examPayload)).unwrap()
+      toast.success('Exam created successfully!')
       navigate('/teacher/exams')
     } catch (error) {
       // The slice already toasts the error, no need to toast here
@@ -226,6 +239,18 @@ const CreateExam = () => {
               placeholder="Enter exam instructions for students"
               className="input-field"
               rows="3"
+            />
+          </div>
+          <div className="form-group">
+            <label>Target Number of Questions *</label>
+            <input
+              type="number"
+              name="targetQuestions"
+              value={examData.targetQuestions}
+              onChange={handleExamDataChange}
+              min="1"
+              className="input-field"
+              required
             />
           </div>
         </div>
@@ -469,6 +494,33 @@ const CreateExam = () => {
       animate={{ opacity: 1, x: 0 }}
       className="space-y-6"
     >
+      {/* Question Tracker Sticky Widget */}
+      <div style={{
+        position: 'sticky',
+        top: '20px',
+        zIndex: 50,
+        background: 'var(--dark-800)',
+        border: '1px solid var(--primary-500)',
+        borderRadius: '12px',
+        padding: '16px',
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        boxShadow: '0 8px 30px rgba(0,0,0,0.5)',
+        marginBottom: '20px'
+      }}>
+        <div>
+          <h4 style={{ color: 'var(--text-main)', margin: 0, fontSize: '16px' }}>Target Questions: {examData.targetQuestions}</h4>
+          <p style={{ color: 'var(--dark-400)', fontSize: '14px', margin: '6px 0 0 0' }}>
+            Added: <span style={{ color: '#10b981', fontWeight: 'bold' }}>{questions.length}</span> | 
+            Remaining: <span style={{ color: '#f59e0b', fontWeight: 'bold' }}>{Math.max(0, examData.targetQuestions - questions.length)}</span>
+          </p>
+        </div>
+        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: questions.length == examData.targetQuestions ? '#10b981' : 'var(--dark-700)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', transition: 'background 0.3s' }}>
+          {questions.length == examData.targetQuestions ? <FiCheck size={20} /> : <FiClock size={20} />}
+        </div>
+      </div>
+
       {/* Question Builder */}
       <div className="card">
         <h3 style={{ color: 'var(--text-main)', marginBottom: '16px' }}>➕ Add Questions</h3>
@@ -501,10 +553,19 @@ const CreateExam = () => {
             />
           </div>
 
-          {/* Image Upload */}
+          {/* Image Upload / URL */}
           <div className="form-group">
-            <label>Question Image (Optional)</label>
-            <div className="image-upload-container">
+            <label>Question Image (Optional) - Upload or Paste URL</label>
+            <div className="image-upload-container" style={{ display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }}>
+              <input
+                type="text"
+                placeholder="Paste image URL here..."
+                value={typeof currentQuestion.image === 'string' && currentQuestion.image.startsWith('http') ? currentQuestion.image : ''}
+                onChange={(e) => setCurrentQuestion(prev => ({ ...prev, image: e.target.value }))}
+                className="input-field"
+                style={{ flex: 1, minWidth: '200px' }}
+              />
+              <span style={{ color: 'var(--dark-400)' }}>OR</span>
               <input
                 type="file"
                 accept="image/*"

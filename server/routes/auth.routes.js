@@ -165,7 +165,10 @@ router.post('/login',
           profileImage: user.profileImage,
           department: user.department,
           college: user.college,
-          phone: user.phone
+          phone: user.phone,
+          age: user.age,
+          gender: user.gender,
+          address: user.address
         }
       });
     } catch (error) {

@@ -72,7 +72,10 @@ const StudentExams = () => {
   const getStatusBadge = (exam) => {
     if (exam.isTaken) {
       const result = results?.find(r => r.examId?._id === exam._id)
-      return { label: result?.isPassed ? 'Passed' : 'Failed', color: result?.isPassed ? 'badge-success' : 'badge-danger' }
+      if (result?.isPublished) {
+        return { label: result?.isPassed ? 'Passed' : 'Failed', color: result?.isPassed ? 'badge-success' : 'badge-danger' }
+      }
+      return { label: 'Result Pending', color: 'badge-warning' }
     }
     if (exam.isAvailable) {
       return { label: 'Available', color: 'badge-warning' }
@@ -164,11 +167,7 @@ const StudentExams = () => {
                     <span className={`badge ${status.color}`}>
                       {status.label}
                     </span>
-                    {exam.isTaken && result && (
-                      <span className={`badge ${result.isPassed ? 'badge-success' : 'badge-danger'}`}>
-                        {result.isPassed ? 'Passed' : 'Failed'}
-                      </span>
-                    )}
+
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', marginTop: '8px', color: 'var(--dark-400)', fontSize: '14px' }}>
                     <span style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
@@ -246,7 +245,10 @@ const StudentExams = () => {
       {showExamInfo && (
         <div style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           background: 'rgba(0,0,0,0.7)',
           display: 'flex',
           alignItems: 'center',
@@ -271,6 +273,7 @@ const StudentExams = () => {
               <p><strong>Passing Marks:</strong> {showExamInfo.passingMarks || 'N/A'}</p>
               {showExamInfo.description && <p><strong>Description:</strong> {showExamInfo.description}</p>}
               {showExamInfo.instructions && <p><strong>Instructions:</strong> {showExamInfo.instructions}</p>}
+              <p><strong>Late Entry Allowed:</strong> Up to {showExamInfo.entryTime || 15} minutes after start</p>
               <p><strong>Status:</strong> {showExamInfo.isTaken ? 'Completed' : showExamInfo.isAvailable ? 'Available' : showExamInfo.isUpcoming ? 'Upcoming' : 'Expired'}</p>
             </div>
             <button
@@ -288,7 +291,10 @@ const StudentExams = () => {
       {showPasswordModal && selectedExam && (
         <div style={{
           position: 'fixed',
-          inset: 0,
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
           background: 'rgba(0,0,0,0.7)',
           display: 'flex',
           alignItems: 'center',

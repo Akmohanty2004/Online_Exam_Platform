@@ -4,14 +4,39 @@ import { useDispatch, useSelector } from 'react-redux'
 import { motion } from 'framer-motion'
 import { 
   FiClock, FiChevronLeft, FiChevronRight, 
-  FiCamera, FiMic, FiMicOff, FiCameraOff
+  FiCamera, FiMic, FiMicOff, FiCameraOff, FiMonitor
 } from 'react-icons/fi'
 import Webcam from 'react-webcam'
 import { getStudentExam } from '../../redux/slices/examSlice'
 import { submitExam } from '../../redux/slices/resultSlice'
 import { toast } from 'react-toastify'
+import Calculator from '../../components/common/Calculator'
 
-const StudentExam = () => {
+class ErrorBoundary extends React.Component {
+  constructor(props) {
+    super(props);
+    this.state = { hasError: false, error: null };
+  }
+  static getDerivedStateFromError(error) {
+    return { hasError: true, error };
+  }
+  componentDidCatch(error, errorInfo) {
+    console.error("Exam ErrorBoundary caught an error", error, errorInfo);
+  }
+  render() {
+    if (this.state.hasError) {
+      return (
+        <div style={{ padding: '20px', color: 'white', background: 'red', zIndex: 999999, position: 'relative' }}>
+          <h2>Something went wrong in Exam.jsx.</h2>
+          <pre>{this.state.error && this.state.error.toString()}</pre>
+        </div>
+      );
+    }
+    return this.props.children;
+  }
+}
+
+const StudentExamContent = () => {
   const { examId } = useParams()
   const navigate = useNavigate()
   const dispatch = useDispatch()
@@ -25,6 +50,10 @@ const StudentExam = () => {
   const [isMicOn, setIsMicOn] = useState(true)
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [questionStatus, setQuestionStatus] = useState({})
+  const [showCalculator, setShowCalculator] = useState(false)
+  const [isStarted, setIsStarted] = useState(false)
+  
+  const forceSubmitExamRef = useRef(null)
   const [tabSwitchCount, setTabSwitchCount] = useState(0)
   
   const webcamRef = useRef(null)
@@ -32,6 +61,7 @@ const StudentExam = () => {
   const answersRef = useRef(answers)
   const tabSwitchCountRef = useRef(tabSwitchCount)
   const scrollRef = useRef(null)
+  const isSubmittedRef = useRef(isSubmitted)
 
   // Keep refs in sync with state for accurate auto-submission
   useEffect(() => {
@@ -43,27 +73,13 @@ const StudentExam = () => {
   }, [tabSwitchCount])
 
   useEffect(() => {
+    isSubmittedRef.current = isSubmitted
+  }, [isSubmitted])
+
+
+  useEffect(() => {
     dispatch(getStudentExam(examId))
     
-    // Enable fullscreen
-    const enableFullscreen = async () => {
-      try {
-        await document.documentElement.requestFullscreen()
-      } catch (err) {
-        toast.warning('Please enable fullscreen mode for the exam')
-      }
-    }
-    enableFullscreen()
-
-    // Prevent tab switching
-    const handleVisibilityChange = () => {
-      if (document.hidden) {
-        setTabSwitchCount(prev => prev + 1)
-        toast.error('Warning: Tab switching detected!')
-      }
-    }
-    document.addEventListener('visibilitychange', handleVisibilityChange)
-
     // Prevent copy paste
     const preventCopy = (e) => {
       e.preventDefault()
@@ -74,16 +90,62 @@ const StudentExam = () => {
     document.addEventListener('contextmenu', preventCopy)
 
     return () => {
-      document.removeEventListener('visibilitychange', handleVisibilityChange)
       document.removeEventListener('copy', preventCopy)
       document.removeEventListener('paste', preventCopy)
       document.removeEventListener('contextmenu', preventCopy)
-      if (document.fullscreenElement) {
-        document.exitFullscreen()
-      }
       clearInterval(timerRef.current)
     }
   }, [dispatch, examId])
+
+  useEffect(() => {
+    if (!currentExam?.exam || !isStarted) return;
+    
+    if (currentExam.exam.fullscreenMode !== false) {
+      // Enable fullscreen
+      const enableFullscreen = async () => {
+        try {
+          if (!document.fullscreenElement) {
+            await document.documentElement.requestFullscreen()
+          }
+        } catch (err) {
+          toast.warning('Please enable fullscreen mode for the exam')
+        }
+      }
+      enableFullscreen()
+
+      // Prevent tab switching
+      const handleVisibilityChange = () => {
+        if (document.hidden && !isSubmittedRef.current) {
+          isSubmittedRef.current = true
+          setTabSwitchCount(prev => prev + 1)
+          toast.error('Warning: Tab switching detected! Exam auto-submitted.', { autoClose: false, toastId: 'tab-switch' })
+          forceSubmitExamRef.current()
+        }
+      }
+      
+      const handleBlur = () => {
+        if (!isSubmittedRef.current) {
+          isSubmittedRef.current = true
+          setTabSwitchCount(prev => prev + 1)
+          toast.error('Warning: Window unfocused! Exam auto-submitted.', { autoClose: false, toastId: 'window-blur' })
+          forceSubmitExamRef.current()
+        }
+      }
+      
+      document.addEventListener('visibilitychange', handleVisibilityChange)
+      window.addEventListener('blur', handleBlur)
+
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange)
+        window.removeEventListener('blur', handleBlur)
+        if (document.fullscreenElement) {
+          document.exitFullscreen().catch(err => console.log(err))
+        }
+      }
+    }
+  }, [currentExam])
+
+
 
   useEffect(() => {
     if (currentExam?.exam) {
@@ -117,19 +179,21 @@ const StudentExam = () => {
         status[index] = 'not-answered'
       })
       setQuestionStatus(status)
-
-      timerRef.current = setInterval(() => {
-        setTimeLeft(prev => {
-          if (prev <= 1) {
-            clearInterval(timerRef.current)
-            handleAutoSubmit()
-            return 0
-          }
-          return prev - 1
-        })
-      }, 1000)
+      
+      if (isStarted) {
+        timerRef.current = setInterval(() => {
+          setTimeLeft(prev => {
+            if (prev <= 1) {
+              clearInterval(timerRef.current)
+              handleAutoSubmit()
+              return 0
+            }
+            return prev - 1
+          })
+        }, 1000)
+      }
     }
-  }, [currentExam])
+  }, [currentExam, isStarted])
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -175,6 +239,7 @@ const StudentExam = () => {
 
   const forceSubmitExam = async () => {
     setIsSubmitted(true)
+    isSubmittedRef.current = true
     clearInterval(timerRef.current)
 
     // Stop webcam tracks if they exist
@@ -205,6 +270,10 @@ const StudentExam = () => {
     navigate('/student/exams')
   }
 
+  useEffect(() => {
+    forceSubmitExamRef.current = forceSubmitExam
+  }, [forceSubmitExam])
+
   const formatTime = (seconds) => {
     const mins = Math.floor(seconds / 60)
     const secs = seconds % 60
@@ -213,10 +282,19 @@ const StudentExam = () => {
 
 
 
-  if (isLoading || (!currentExam && !error)) {
+  if (isLoading) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--dark-900)' }}>
         <div style={{ color: 'var(--dark-400)', fontSize: '18px' }}>Loading exam...</div>
+      </div>
+    )
+  }
+
+  if (!currentExam && !error) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--dark-900)', flexDirection: 'column' }}>
+        <div style={{ color: 'var(--warning)', fontSize: '24px', marginBottom: '10px' }}>DEBUG: No currentExam and No error.</div>
+        <div style={{ color: 'white' }}>Exam ID from URL: {examId}</div>
       </div>
     )
   }
@@ -239,56 +317,87 @@ const StudentExam = () => {
   const exam = currentExam.exam
   const questions = currentExam.questions || []
 
+  if (!isStarted) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh', background: 'var(--dark-900)' }}>
+        <div className="card" style={{ textAlign: 'center', padding: '40px', maxWidth: '500px' }}>
+          <h2 style={{ color: 'white', marginBottom: '20px' }}>Ready to Start?</h2>
+          <p style={{ color: 'var(--dark-400)', marginBottom: '30px' }}>
+            Click the button below to begin your exam. 
+            {exam.fullscreenMode !== false && " This will open the exam in fullscreen mode."}
+          </p>
+          <button className="btn-primary" onClick={() => setIsStarted(true)} style={{ padding: '12px 24px', fontSize: '16px' }}>
+            Begin Exam
+          </button>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div style={{ 
       position: 'fixed', 
-      inset: 0, 
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      width: '100vw',
+      height: '100vh',
       background: 'var(--dark-900)',
       display: 'flex',
       flexDirection: 'column',
       zIndex: 9999
     }}>
       {/* Webcam */}
-      <div style={{
-        position: 'fixed',
-        bottom: '16px',
-        right: '16px',
-        width: '200px',
-        height: '150px',
-        borderRadius: '12px',
-        overflow: 'hidden',
-        border: '2px solid rgba(99, 102, 241, 0.4)',
-        boxShadow: '0 0 30px rgba(99, 102, 241, 0.15)',
-        zIndex: 10000,
-        background: 'var(--dark-800)'
-      }}>
-        {isCameraOn ? (
-          <Webcam
-            ref={webcamRef}
-            audio={isMicOn}
-            videoConstraints={{ facingMode: 'user' }}
-            style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-          />
-        ) : (
-          <div style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--dark-800)' }}>
-            <FiCameraOff style={{ fontSize: '32px', color: 'var(--dark-400)' }} />
+      {exam?.enableCamera !== false && (
+        <div style={{
+          position: 'fixed',
+          bottom: '16px',
+          right: '16px',
+          width: '200px',
+          height: '150px',
+          borderRadius: '12px',
+          overflow: 'hidden',
+          border: '2px solid rgba(99, 102, 241, 0.4)',
+          boxShadow: '0 0 30px rgba(99, 102, 241, 0.15)',
+          zIndex: 10000,
+          background: 'var(--dark-800)'
+        }}>
+          {isCameraOn && navigator.mediaDevices ? (
+            <Webcam
+              ref={webcamRef}
+              audio={isMicOn && exam?.enableMicrophone !== false}
+              videoConstraints={{ facingMode: 'user' }}
+              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+              onUserMediaError={(err) => {
+                console.warn("Webcam error:", err);
+                setIsCameraOn(false);
+              }}
+            />
+          ) : (
+            <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: 'var(--dark-800)' }}>
+              <FiCameraOff style={{ fontSize: '32px', color: 'var(--dark-400)', marginBottom: '8px' }} />
+              {!navigator.mediaDevices && <span style={{ fontSize: '10px', color: 'var(--danger)', textAlign: 'center' }}>HTTPS required for camera</span>}
+            </div>
+          )}
+          <div style={{ position: 'absolute', bottom: '8px', left: '8px', display: 'flex', gap: '6px' }}>
+            <button
+              onClick={() => setIsCameraOn(!isCameraOn)}
+              style={{ padding: '4px 10px', borderRadius: '50px', border: 'none', background: 'rgba(15,23,42,0.8)', color: 'white', cursor: 'pointer', fontSize: '12px' }}
+            >
+              {isCameraOn ? <FiCamera style={{ fontSize: '14px' }} /> : <FiCameraOff style={{ fontSize: '14px' }} />}
+            </button>
+            {exam?.enableMicrophone !== false && (
+              <button
+                onClick={() => setIsMicOn(!isMicOn)}
+                style={{ padding: '4px 10px', borderRadius: '50px', border: 'none', background: 'rgba(15,23,42,0.8)', color: 'white', cursor: 'pointer', fontSize: '12px' }}
+              >
+                {isMicOn ? <FiMic style={{ fontSize: '14px' }} /> : <FiMicOff style={{ fontSize: '14px' }} />}
+              </button>
+            )}
           </div>
-        )}
-        <div style={{ position: 'absolute', bottom: '8px', left: '8px', display: 'flex', gap: '6px' }}>
-          <button
-            onClick={() => setIsCameraOn(!isCameraOn)}
-            style={{ padding: '4px 10px', borderRadius: '50px', border: 'none', background: 'rgba(15,23,42,0.8)', color: 'white', cursor: 'pointer', fontSize: '12px' }}
-          >
-            {isCameraOn ? <FiCamera style={{ fontSize: '14px' }} /> : <FiCameraOff style={{ fontSize: '14px' }} />}
-          </button>
-          <button
-            onClick={() => setIsMicOn(!isMicOn)}
-            style={{ padding: '4px 10px', borderRadius: '50px', border: 'none', background: 'rgba(15,23,42,0.8)', color: 'white', cursor: 'pointer', fontSize: '12px' }}
-          >
-            {isMicOn ? <FiMic style={{ fontSize: '14px' }} /> : <FiMicOff style={{ fontSize: '14px' }} />}
-          </button>
         </div>
-      </div>
+      )}
 
       {/* Header */}
       <div style={{
@@ -319,6 +428,19 @@ const StudentExam = () => {
           <div style={{ fontSize: '14px', color: 'var(--dark-400)' }}>
             {Object.values(questionStatus).filter(s => s === 'answered').length} / {questions.length}
           </div>
+          {exam?.allowCalculator && (
+            <button
+              onClick={() => setShowCalculator(!showCalculator)}
+              style={{
+                display: 'flex', alignItems: 'center', gap: '8px',
+                padding: '8px 16px', borderRadius: '50px', border: '1px solid rgba(255,255,255,0.1)',
+                background: showCalculator ? 'var(--primary-500)' : 'rgba(15,23,42,0.8)',
+                color: 'white', cursor: 'pointer', fontSize: '14px'
+              }}
+            >
+              <FiMonitor /> Calculator
+            </button>
+          )}
           <button
             onClick={handleExitExam}
             disabled={isSubmitted}
@@ -344,139 +466,163 @@ const StudentExam = () => {
         <div style={{ flex: 1, overflowY: 'auto', padding: '28px' }} ref={scrollRef}>
           <div style={{ maxWidth: '800px', margin: '0 auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '16px', fontSize: '14px', color: 'var(--dark-400)' }}>
-              <span>Question {currentQuestion + 1} of {questions.length}</span>
+              <span>Total Questions: {questions.length}</span>
               <span style={{ padding: '4px 12px', background: 'rgba(99,102,241,0.15)', color: 'var(--primary-400)', borderRadius: '50px' }}>
-                {exam.maxMarks / questions.length} marks
+                {exam?.maxMarks && questions.length ? (exam.maxMarks / questions.length).toFixed(1) : 0} marks
               </span>
             </div>
 
-            <div className="card">
-              {/* Question */}
-              <div style={{ marginBottom: '24px' }}>
-                <p style={{ color: 'white', fontSize: '18px', fontWeight: 500, lineHeight: 1.7 }}>
-                  {questions[currentQuestion]?.question}
-                </p>
-                {questions[currentQuestion]?.image && (
-                  <img 
-                    src={questions[currentQuestion].image} 
-                    alt="Question"
-                    style={{ marginTop: '16px', maxWidth: '100%', maxHeight: '300px', borderRadius: '12px', objectFit: 'contain' }}
-                  />
-                )}
+            {questions.length === 0 ? (
+              <div className="card" style={{ textAlign: 'center', padding: '40px' }}>
+                <h2 style={{ color: 'var(--danger)', marginBottom: '16px' }}>No Questions Found!</h2>
+                <p style={{ color: 'var(--dark-400)' }}>The backend returned 0 questions for this exam.</p>
               </div>
+            ) : (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '30px' }}>
+                <div className="card" id={`question-${currentQuestion}`}>
+                  {/* Question */}
+                  <div style={{ marginBottom: '24px' }}>
+                    <p style={{ color: 'var(--text-main, white)', fontSize: '18px', fontWeight: 500, lineHeight: 1.7 }}>
+                      <span style={{ marginRight: '8px', color: 'var(--primary-400)' }}>{currentQuestion + 1}.</span> 
+                      {questions[currentQuestion].question}
+                    </p>
+                    {questions[currentQuestion].image && (
+                      <img 
+                        src={questions[currentQuestion].image} 
+                        alt="Question"
+                        style={{ marginTop: '16px', maxWidth: '100%', maxHeight: '300px', borderRadius: '12px', objectFit: 'contain' }}
+                      />
+                    )}
+                  </div>
 
-              {/* Options */}
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {questions[currentQuestion]?.type === 'mcq' && questions[currentQuestion]?.options?.map((option, optIndex) => {
-                  const isSelected = answers[questions[currentQuestion]._id] === option.text
-                  return (
-                    <button
-                      key={optIndex}
-                      onClick={() => handleAnswerSelect(currentQuestion, option.text)}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '14px',
-                        padding: '14px 18px',
-                        background: isSelected ? 'rgba(99,102,241,0.15)' : 'rgba(30,41,59,0.5)',
-                        border: isSelected ? '2px solid var(--primary-500)' : '2px solid transparent',
-                        borderRadius: 'var(--border-radius)',
-                        cursor: 'pointer',
-                        transition: 'var(--transition)',
-                        width: '100%',
-                        textAlign: 'left'
-                      }}
-                    >
-                      <span style={{
-                        width: '32px',
-                        height: '32px',
-                        borderRadius: '50%',
-                        background: isSelected ? 'var(--primary-500)' : 'var(--dark-700)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: '14px',
-                        fontWeight: 600,
-                        color: isSelected ? 'white' : 'var(--dark-400)',
-                        flexShrink: 0
-                      }}>
-                        {String.fromCharCode(65 + optIndex)}
-                      </span>
-                      <span style={{ color: 'white', fontSize: '15px' }}>{option.text}</span>
-                    </button>
-                  )
-                })}
-
-                {questions[currentQuestion]?.type === 'truefalse' && (
-                  <div style={{ display: 'flex', gap: '12px' }}>
-                    {['true', 'false'].map((val) => {
-                      const isSelected = answers[questions[currentQuestion]._id] === val;
+                  {/* Options */}
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                    {questions[currentQuestion].type === 'mcq' && questions[currentQuestion].options?.map((option, optIndex) => {
+                      const isSelected = answers[questions[currentQuestion]._id] === option.text
                       return (
                         <button
-                          key={val}
-                          onClick={() => handleAnswerSelect(currentQuestion, val)}
+                          key={optIndex}
+                          onClick={() => handleAnswerSelect(currentQuestion, option.text)}
                           style={{
-                            flex: 1,
-                            padding: '16px',
-                            background: isSelected ? 'rgba(99,102,241,0.15)' : 'rgba(30,41,59,0.5)',
-                            border: isSelected ? '2px solid var(--primary-500)' : '2px solid transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '14px',
+                            padding: '14px 18px',
+                            background: isSelected ? 'rgba(99,102,241,0.15)' : 'var(--dark-800)',
+                            border: isSelected ? '2px solid var(--primary-500)' : '2px solid rgba(255,255,255,0.05)',
                             borderRadius: 'var(--border-radius)',
-                            color: isSelected ? 'white' : 'var(--dark-400)',
-                            fontSize: '16px',
-                            fontWeight: 600,
                             cursor: 'pointer',
-                            textTransform: 'capitalize'
+                            transition: 'var(--transition)',
+                            width: '100%',
+                            textAlign: 'left'
                           }}
                         >
-                          {val}
+                          <span style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '50%',
+                            background: isSelected ? 'var(--primary-500)' : 'var(--dark-700)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontSize: '14px',
+                            fontWeight: 600,
+                            color: isSelected ? 'white' : 'var(--dark-400)',
+                            flexShrink: 0
+                          }}>
+                            {String.fromCharCode(65 + optIndex)}
+                          </span>
+                          <span style={{ color: 'var(--text-main, white)', fontSize: '15px' }}>{option.text}</span>
                         </button>
-                      );
+                      )
                     })}
-                  </div>
-                )}
 
-                {questions[currentQuestion]?.type === 'text' && (
-                  <div>
-                    <input
-                      type="text"
-                      value={answers[questions[currentQuestion]._id] || ''}
-                      onChange={(e) => handleAnswerSelect(currentQuestion, e.target.value)}
-                      placeholder="Type your answer here..."
-                      style={{
-                        width: '100%',
-                        padding: '16px',
-                        background: 'rgba(30,41,59,0.5)',
-                        border: '1px solid rgba(255,255,255,0.1)',
-                        borderRadius: 'var(--border-radius)',
-                        color: 'white',
-                        fontSize: '16px',
-                        outline: 'none'
-                      }}
-                    />
+                    {questions[currentQuestion].type === 'truefalse' && (
+                      <div style={{ display: 'flex', gap: '12px' }}>
+                        {['true', 'false'].map((val) => {
+                          const isSelected = answers[questions[currentQuestion]._id] === val;
+                          return (
+                            <button
+                              key={val}
+                              onClick={() => handleAnswerSelect(currentQuestion, val)}
+                              style={{
+                                flex: 1,
+                                padding: '16px',
+                                background: isSelected ? 'rgba(99,102,241,0.15)' : 'var(--dark-800)',
+                                border: isSelected ? '2px solid var(--primary-500)' : '2px solid rgba(255,255,255,0.05)',
+                                borderRadius: 'var(--border-radius)',
+                                color: isSelected ? 'var(--primary-400)' : 'var(--dark-400)',
+                                fontSize: '16px',
+                                fontWeight: 600,
+                                cursor: 'pointer',
+                                textTransform: 'capitalize'
+                              }}
+                            >
+                              {val}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+
+                    {questions[currentQuestion].type === 'text' && (
+                      <div>
+                        <input
+                          type="text"
+                          value={answers[questions[currentQuestion]._id] || ''}
+                          onChange={(e) => handleAnswerSelect(currentQuestion, e.target.value)}
+                          placeholder="Type your answer here..."
+                          style={{
+                            width: '100%',
+                            padding: '16px',
+                            background: 'var(--dark-800)',
+                            border: '1px solid rgba(255,255,255,0.1)',
+                            borderRadius: 'var(--border-radius)',
+                            color: 'var(--text-main, white)',
+                            fontSize: '16px',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    )}
                   </div>
-                )}
+                </div>
+                
+                {/* Navigation */}
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
+                  <button
+                    onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
+                    disabled={currentQuestion === 0}
+                    className="btn-secondary"
+                    style={{ 
+                      padding: '10px 20px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      opacity: currentQuestion === 0 ? 0.5 : 1,
+                      cursor: currentQuestion === 0 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    <FiChevronLeft /> Previous
+                  </button>
+                  <button
+                    onClick={() => setCurrentQuestion(prev => Math.min(questions.length - 1, prev + 1))}
+                    disabled={currentQuestion === questions.length - 1}
+                    className="btn-primary"
+                    style={{ 
+                      padding: '10px 20px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '8px',
+                      opacity: currentQuestion === questions.length - 1 ? 0.5 : 1,
+                      cursor: currentQuestion === questions.length - 1 ? 'not-allowed' : 'pointer'
+                    }}
+                  >
+                    Next <FiChevronRight />
+                  </button>
+                </div>
               </div>
-            </div>
-
-            {/* Navigation */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: '20px' }}>
-              <button
-                onClick={() => setCurrentQuestion(prev => Math.max(0, prev - 1))}
-                disabled={currentQuestion === 0}
-                className="btn-secondary"
-                style={{ padding: '8px 20px', opacity: currentQuestion === 0 ? 0.5 : 1, cursor: currentQuestion === 0 ? 'not-allowed' : 'pointer' }}
-              >
-                <FiChevronLeft /> Previous
-              </button>
-              <button
-                onClick={() => setCurrentQuestion(prev => Math.min(questions.length - 1, prev + 1))}
-                disabled={currentQuestion === questions.length - 1}
-                className="btn-secondary"
-                style={{ padding: '8px 20px', opacity: currentQuestion === questions.length - 1 ? 0.5 : 1, cursor: currentQuestion === questions.length - 1 ? 'not-allowed' : 'pointer' }}
-              >
-                Next <FiChevronRight />
-              </button>
-            </div>
+            )}
           </div>
         </div>
 
@@ -542,6 +688,8 @@ const StudentExam = () => {
         </div>
       </div>
 
+      {showCalculator && <Calculator onClose={() => setShowCalculator(false)} />}
+
       {/* Warning */}
       {timeLeft < 60 && timeLeft > 0 && (
         <div style={{
@@ -566,5 +714,11 @@ const StudentExam = () => {
     </div>
   )
 }
+
+const StudentExam = () => (
+  <ErrorBoundary>
+    <StudentExamContent />
+  </ErrorBoundary>
+)
 
 export default StudentExam

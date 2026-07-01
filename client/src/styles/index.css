@@ -539,3 +539,70 @@ tbody tr:hover {
   50% { transform: translate(-50%, -50%) scale(1.05); opacity: 0.3; }
   100% { transform: translate(-50%, -50%) scale(0.95); opacity: 0.7; }
 }
+
+/* ===== Responsive & Mobile CSS ===== */
+@media (max-width: 768px) {
+  .main-content {
+    margin-left: 0 !important;
+    padding: 15px !important;
+  }
+  
+  .main-content.expanded {
+    margin-left: 0 !important;
+  }
+
+  .sidebar {
+    transform: translateX(-100%);
+    width: 250px !important;
+    position: fixed;
+    z-index: 1000;
+  }
+  
+  .sidebar.show {
+    transform: translateX(0);
+  }
+  
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 15px;
+  }
+
+  .charts-grid {
+    grid-template-columns: 1fr !important;
+  }
+  
+  .auth-box, .auth-card {
+    width: 90% !important;
+    margin: 20px auto !important;
+    padding: 20px !important;
+  }
+
+  .auth-split {
+    flex-direction: column !important;
+  }
+
+  .auth-left, .auth-right {
+    width: 100% !important;
+  }
+
+  .table-container {
+    overflow-x: auto;
+  }
+  
+  .table {
+    min-width: 600px;
+  }
+
+  .header-left h1 {
+    font-size: 1.2rem;
+  }
+
+  .welcome-banner {
+    padding: 20px;
+    margin-bottom: 20px;
+  }
+  
+  .welcome-banner h2 {
+    font-size: 1.5rem !important;
+  }
+}

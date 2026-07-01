@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
 import { FiSearch, FiDownload, FiCheckCircle, FiXCircle } from 'react-icons/fi'
 import { getTeacherExams } from '../../redux/slices/examSlice'
-import { getTeacherResults } from '../../redux/slices/resultSlice'
+import { getTeacherResults, publishResults } from '../../redux/slices/resultSlice'
 
 const TeacherResults = () => {
   const dispatch = useDispatch()
   const { exams } = useSelector(state => state.exams)
-  const { results, isLoading } = useSelector(state => state.results)
+  const { results: rawResults, isLoading } = useSelector(state => state.results)
+  const results = Array.isArray(rawResults) ? rawResults : []
   const [selectedExam, setSelectedExam] = useState('')
 
   useEffect(() => {
@@ -127,19 +128,66 @@ const TeacherResults = () => {
         </div>
       ) : selectedExam ? (
         <div className="segmented-results" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
-          <div style={{ padding: '20px', background: 'var(--dark-200)', borderRadius: '12px', border: '1px solid rgba(255,255,255,0.05)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '10px' }}>
+          <div className="card" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: '15px', padding: '20px', marginBottom: '10px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '15px' }}>
               <button 
                 className="btn-secondary" 
-                style={{ padding: '6px 12px', fontSize: '12px', display: 'flex', alignItems: 'center', gap: '6px' }}
+                style={{ padding: '8px 16px', fontSize: '13px', display: 'flex', alignItems: 'center', gap: '8px', borderRadius: '8px' }}
                 onClick={() => setSelectedExam('')}
               >
                 ← Back
               </button>
-              <h3 style={{ color: 'var(--text-main)', margin: 0 }}>Results for "{selectedExamDetails?.title}"</h3>
+              <h3 style={{ color: 'var(--text-main)', margin: 0, fontSize: '18px', fontWeight: '600' }}>Results for "{selectedExamDetails?.title}"</h3>
             </div>
-            <span style={{ color: 'var(--dark-400)', fontSize: '14px' }}>Total Submissions: {results ? results.length : 0}</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap' }}>
+              <div style={{ background: 'rgba(99, 102, 241, 0.1)', border: '1px solid rgba(99, 102, 241, 0.2)', padding: '8px 16px', borderRadius: '20px', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <span style={{ color: 'var(--dark-400)', fontSize: '13px', fontWeight: '500' }}>Total Submissions:</span>
+                <span style={{ color: 'var(--primary-500)', fontSize: '15px', fontWeight: 'bold' }}>{results ? results.length : 0}</span>
+              </div>
+              
+              {!selectedExamDetails?.isResultPublished && (
+                <button 
+                  className="btn-primary" 
+                  onClick={() => {
+                    dispatch(publishResults(selectedExam)).then((res) => {
+                      if(!res.error) {
+                        dispatch(getTeacherExams()); // refresh exams to get updated isResultPublished state
+                      }
+                    });
+                  }}
+                >
+                  Publish Results
+                </button>
+              )}
+              {selectedExamDetails?.isResultPublished && (
+                <span className="badge badge-success" style={{ padding: '8px 12px' }}>
+                  Results Published
+                </span>
+              )}
+            </div>
           </div>
+
+          {/* Added Detailed Stats Overview */}
+          {results && results.length > 0 && (
+            <div className="stats-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '10px' }}>
+              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--dark-400)', fontSize: '13px', textTransform: 'uppercase' }}>Total Students</div>
+                <div style={{ fontSize: '28px', fontWeight: 'bold', color: 'var(--primary-500)', marginTop: '8px' }}>{results.length}</div>
+              </div>
+              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--dark-400)', fontSize: '13px', textTransform: 'uppercase' }}>Total Passed</div>
+                <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#10b981', marginTop: '8px' }}>{results.filter(r => r.isPassed).length}</div>
+              </div>
+              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--dark-400)', fontSize: '13px', textTransform: 'uppercase' }}>Total Failed</div>
+                <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#ef4444', marginTop: '8px' }}>{results.filter(r => !r.isPassed).length}</div>
+              </div>
+              <div className="card" style={{ padding: '20px', textAlign: 'center' }}>
+                <div style={{ color: 'var(--dark-400)', fontSize: '13px', textTransform: 'uppercase' }}>Cheating Detected</div>
+                <div style={{ fontSize: '28px', fontWeight: 'bold', color: '#f59e0b', marginTop: '8px' }}>{results.filter(r => r.tabSwitches > 0).length}</div>
+              </div>
+            </div>
+          )}
 
           {!results || results.length === 0 ? (
             <div className="card" style={{ padding: '40px', textAlign: 'center' }}>
@@ -227,6 +275,7 @@ const TeacherResults = () => {
                       <thead style={{ background: 'rgba(239, 68, 68, 0.1)' }}>
                         <tr>
                           <th style={{ padding: '12px', textAlign: 'left', color: '#ef4444', fontSize: '12px', textTransform: 'uppercase' }}>Student Name</th>
+                          <th style={{ padding: '12px', textAlign: 'left', color: '#ef4444', fontSize: '12px', textTransform: 'uppercase' }}>Type of Cheating</th>
                           <th style={{ padding: '12px', textAlign: 'left', color: '#ef4444', fontSize: '12px', textTransform: 'uppercase' }}>Tab Switches</th>
                         </tr>
                       </thead>
@@ -239,6 +288,7 @@ const TeacherResults = () => {
                                 <span style={{ fontSize: '12px', color: 'var(--dark-400)' }}>{result.studentId?.email}</span>
                               </div>
                             </td>
+                            <td style={{ padding: '12px', color: '#f59e0b', fontSize: '13px' }}>Switched Tabs / Left Window</td>
                             <td style={{ padding: '12px', color: '#ef4444', fontWeight: 'bold' }}>{result.tabSwitches} times</td>
                           </tr>
                         ))}

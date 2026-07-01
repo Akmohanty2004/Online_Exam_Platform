@@ -143,7 +143,10 @@ const MainLayout = () => {
               <button
                 key={item.path}
                 className={`nav-item ${isActive ? 'active' : ''}`}
-                onClick={() => navigate(item.path)}
+                onClick={() => {
+                  navigate(item.path)
+                  if (isMobile) setIsSidebarOpen(false)
+                }}
               >
                 <Icon />
                 {isSidebarOpen && <span className="label">{item.label}</span>}
