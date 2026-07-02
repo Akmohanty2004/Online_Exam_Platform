@@ -1,7 +1,8 @@
 import axios from 'axios'
 
+const isDev = import.meta.env.DEV;
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: (import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:5000' : 'https://online-exam-platform-server.onrender.com')) + '/api',
   headers: {
     'Content-Type': 'application/json'
   }

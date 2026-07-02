@@ -4,7 +4,12 @@ import { Provider, useDispatch } from 'react-redux'
 import { store } from './redux/store'
 import App from './App'
 import { getCurrentUser } from './redux/slices/authSlice'
+import axios from 'axios'
 import './styles/index.css'
+
+// Automatically use deployed backend on Netlify/production, and localhost during local development
+const isDev = import.meta.env.DEV;
+axios.defaults.baseURL = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:5000' : 'https://online-exam-platform-server.onrender.com');
 import './styles/auth.css'
 import './styles/dashboard.css'
 import './styles/sidebar.css'

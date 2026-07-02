@@ -97,7 +97,8 @@ body[data-theme="light"] {
 [data-theme="light"] .card,
 [data-theme="light"] .stat-card,
 [data-theme="light"] .glass,
-[data-theme="light"] .chart-container {
+[data-theme="light"] .chart-container,
+[data-theme="light"] .profile-stats .stat-item {
   background: rgba(255, 255, 255, 0.75) !important;
   backdrop-filter: blur(12px) !important;
   -webkit-backdrop-filter: blur(12px) !important;
@@ -177,6 +178,33 @@ body[data-theme="light"] {
 [data-theme="light"] .sidebar, [data-theme="light"] .top-header {
   background: #ffffff !important;
   border-color: rgba(0,0,0,0.08) !important;
+}
+
+[data-theme="light"] .top-header .header-right .user-badge {
+  background: rgba(99, 102, 241, 0.1) !important;
+}
+
+[data-theme="light"] .top-header .header-right .user-badge:hover {
+  background: rgba(99, 102, 241, 0.2) !important;
+}
+
+[data-theme="light"] .top-header .header-right .user-badge .role-text {
+  color: #475569 !important;
+}
+
+[data-theme="light"] .filter-btn {
+  background: #e2e8f0;
+  color: #475569;
+}
+
+[data-theme="light"] .filter-btn:hover {
+  background: #cbd5e1;
+  color: #0f172a;
+}
+
+[data-theme="light"] .filter-btn.active {
+  background: var(--primary-500);
+  color: white;
 }
 
 [data-theme="light"] .sidebar-nav .nav-item {

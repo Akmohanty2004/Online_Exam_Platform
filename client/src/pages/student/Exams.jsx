@@ -127,18 +127,7 @@ const StudentExams = () => {
             <button
               key={option}
               onClick={() => setFilter(option)}
-              style={{
-                padding: '10px 20px',
-                borderRadius: 'var(--border-radius)',
-                border: 'none',
-                background: filter === option ? 'var(--primary-500)' : 'rgba(51, 65, 85, 0.5)',
-                color: filter === option ? 'white' : 'var(--dark-400)',
-                cursor: 'pointer',
-                transition: 'var(--transition)',
-                fontWeight: '500',
-                fontSize: '14px',
-                textTransform: 'capitalize'
-              }}
+              className={`filter-btn ${filter === option ? 'active' : ''}`}
             >
               {option}
             </button>

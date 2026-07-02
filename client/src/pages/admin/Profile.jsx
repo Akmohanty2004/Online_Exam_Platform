@@ -161,7 +161,9 @@ const AdminProfile = () => {
   const getImageUrl = (path) => {
     if (!path) return null;
     if (path.startsWith('http')) return path;
-    return '/' + path.replace(/\\/g, '/').replace(/^\//, '');
+    const isDev = import.meta.env.DEV;
+    const baseUrl = import.meta.env.VITE_API_URL || (isDev ? 'http://localhost:5000' : 'https://online-exam-platform-server.onrender.com');
+    return `${baseUrl.replace(/\/$/, '')}/${path.replace(/\\/g, '/').replace(/^\//, '')}`;
   }
 
   return (
