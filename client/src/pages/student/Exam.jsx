@@ -101,22 +101,11 @@ const StudentExamContent = () => {
     if (!currentExam?.exam || !isStarted) return;
     
     if (currentExam.exam.fullscreenMode !== false) {
-      // Enable fullscreen
-      const enableFullscreen = async () => {
-        try {
-          if (!document.fullscreenElement) {
-            await document.documentElement.requestFullscreen()
-          }
-        } catch (err) {
-          toast.warning('Please enable fullscreen mode for the exam')
-        }
-      }
-      enableFullscreen()
-
       // Prevent tab switching
       const handleVisibilityChange = () => {
         if (document.hidden && !isSubmittedRef.current) {
           isSubmittedRef.current = true
+          tabSwitchCountRef.current += 1
           setTabSwitchCount(prev => prev + 1)
           toast.error('Warning: Tab switching detected! Exam auto-submitted.', { autoClose: false, toastId: 'tab-switch' })
           forceSubmitExamRef.current()
@@ -126,6 +115,7 @@ const StudentExamContent = () => {
       const handleBlur = () => {
         if (!isSubmittedRef.current) {
           isSubmittedRef.current = true
+          tabSwitchCountRef.current += 1
           setTabSwitchCount(prev => prev + 1)
           toast.error('Warning: Window unfocused! Exam auto-submitted.', { autoClose: false, toastId: 'window-blur' })
           forceSubmitExamRef.current()
@@ -143,7 +133,7 @@ const StudentExamContent = () => {
         }
       }
     }
-  }, [currentExam])
+  }, [currentExam, isStarted])
 
 
 
@@ -326,7 +316,22 @@ const StudentExamContent = () => {
             Click the button below to begin your exam. 
             {exam.fullscreenMode !== false && " This will open the exam in fullscreen mode."}
           </p>
-          <button className="btn-primary" onClick={() => setIsStarted(true)} style={{ padding: '12px 24px', fontSize: '16px' }}>
+          <button 
+            className="btn-primary" 
+            onClick={async () => {
+              if (exam.fullscreenMode !== false) {
+                try {
+                  if (!document.fullscreenElement) {
+                    await document.documentElement.requestFullscreen()
+                  }
+                } catch (err) {
+                  toast.warning('Please enable fullscreen mode for the exam')
+                }
+              }
+              setIsStarted(true)
+            }} 
+            style={{ padding: '12px 24px', fontSize: '16px' }}
+          >
             Begin Exam
           </button>
         </div>

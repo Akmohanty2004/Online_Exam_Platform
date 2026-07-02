@@ -39,7 +39,7 @@ const StudentProfile = () => {
     }
     try {
       await dispatch(changePassword({ 
-        oldPassword: passwordData.oldPassword, 
+        currentPassword: passwordData.oldPassword, 
         newPassword: passwordData.newPassword 
       })).unwrap()
       setShowPasswordForm(false)
